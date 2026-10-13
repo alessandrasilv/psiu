@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psiu - Cadastro Médico</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div>
+        <h4>Cadastro Novo Médico</h4>
+        <form action="/psiu/cadastro-medico" method="post" id="cadastro-medico">
+            <label for="nome">Nome:</label><br>
+            <input type="text" name="nome" placeholder="Informe o nome" required><br><br>
+
+            <label for="email">Email:</label><br>
+            <input type="email" name="email" placeholder="Informe o email" required><br><br>
+
+            <label for="crm">CRM/CRP:</label><br>
+            <input type="text" name="crm" placeholder="Informe o CRM" required><br><br>
+
+            <label for="senha">Senha Padrão:</label><br>
+            <input type="password" name="senha" value="123456" required><br><br>
+
+            <button type="submit">Cadastrar</button>
+            <a href="dashboard.html">Voltar</a>
+        </form>
+
+        <script>
+            const form = document.getElementById('cadastro-medico');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const dados = Object.fromEntries(formData);
+
+                const response = await fetch('/psiu/cadastro-medico', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                const data = await response.json();
+                alert(data.message);
+                if (response.ok) {
+                    window.location.href = 'dashboard.html';
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psiu - Dashboard</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <!-- Acessibilidade -->
+    <div style="background: #eee; padding: 10px;">
+        <label>Acessibilidade Visual: </label>
+        <select onchange="document.body.className = this.value">
+            <option value="">Normal</option>
+            <option value="protanopia">Protanopia</option>
+            <option value="deuteranopia">Deuteranopia</option>
+            <option value="tritanopia">Tritanopia</option>
+            <option value="dyslexic">Fonte OpenDyslexic</option>
+        </select>
+    </div>
+
+    <header>
+        <h2>Psiu Dashboard</h2>
+        <p>Olá, <strong id="nome-usuario">Carregando...</strong> (<span id="perfil-usuario">...</span>)</p>
+        <button id="btn-sair" type="button">Sair</button>
+    </header>
+
+    <main>
+        <!-- PAINEL ADMIN -->
+        <section id="painel-admin" class="painel">
+            <h3>Painel Administrativo</h3>
+            <div class="card">
+                <h4>Gestão de Médicos</h4>
+                <a href="cadastro-medico.html">Cadastrar Novo Médico</a>
+            </div>
+        </section>
+
+        <!-- PAINEL MÉDICO -->
+        <section id="painel-medico" class="painel">
+            <h3>Painel Médico</h3>
+            <div class="card">
+                <h4>Atualizar Prontuário e Histórico</h4>
+                <form id="form-prontuario">
+                    <div>
+                        <label for="selecao-paciente">Selecione o Paciente:</label><br>
+                        <select name="pacienteID" id="selecao-paciente" required>
+                            <option value="">Carregando...</option>
+                        </select>
+                    </div><br>
+
+                    <div>
+                        <label for="anotacoes-prontuario">Evolução Clínica:</label><br>
+                        <textarea name="anotacoes" id="anotacoes-prontuario" rows="5" cols="40" required></textarea>
+                    </div><br>
+
+                    <button type="submit">Salvar no Prontuário</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PAINEL PACIENTE -->
+        <section id="painel-paciente" class="painel">
+            <h3>Área do Paciente</h3>
+            <div class="card">
+                <h4>Minha Evolução (Linha do Tempo)</h4>
+                <div id="timeline">Carregando histórico...</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const usuarioSalvo = localStorage.getItem('usuarioLogado');
+
+            if (!usuarioSalvo) {
+                alert('Faça login primeiro.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const usuario = JSON.parse(usuarioSalvo);
+            document.getElementById('nome-usuario').textContent = usuario.nome;
+            const perfilUsuario = usuario.classe.toLowerCase();
+            document.getElementById("perfil-usuario").textContent = perfilUsuario.toUpperCase();
+
+            // Ativa o painel certo
+            if (perfilUsuario === 'admin') {
+                document.getElementById('painel-admin').classList.add('ativo');
+            } else if (perfilUsuario === 'medico') {
+                document.getElementById('painel-medico').classList.add('ativo');
+                carregarPacientes();
+            } else if (perfilUsuario === 'paciente') {
+                document.getElementById('painel-paciente').classList.add('ativo');
+                carregarTimeline(usuario.id);
+            }
+
+            document.getElementById('btn-sair').addEventListener('click', () => {
+                localStorage.removeItem('usuarioLogado');
+                window.location.href = 'index.html';
+            });
+
+            // Form Prontuario
+            const formProntuario = document.getElementById('form-prontuario');
+            if (formProntuario) {
+                formProntuario.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const pacienteID = document.getElementById('selecao-paciente').value;
+                    const anotacoes = document.getElementById('anotacoes-prontuario').value;
+
+                    const res = await fetch('/psiu/prontuario', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pacienteID, medicoID: usuario.id, anotacoes })
+                    });
+
+                    const data = await res.json();
+                    alert(data.message);
+                    if (res.ok) formProntuario.reset();
+                });
+            }
+        });
+
+        async function carregarPacientes() {
+            const res = await fetch('/psiu/pacientes');
+            const pacientes = await res.json();
+            const select = document.getElementById('selecao-paciente');
+            select.innerHTML = '<option value="">Selecione...</option>';
+            pacientes.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.nome}</option>`;
+            });
+        }
+
+        async function carregarTimeline(pacienteId) {
+            const res = await fetch(`/psiu/evolucao/${pacienteId}`);
+            const lista = await res.json();
+            const div = document.getElementById('timeline');
+            div.innerHTML = '';
+
+            if (lista.length === 0) {
+                div.innerHTML = '<p>Nenhuma evolução registrada ainda.</p>';
+                return;
+            }
+
+            lista.forEach(item => {
+                div.innerHTML += `
+                    <div class="timeline-item">
+                        <small>${new Date(item.data).toLocaleString()}</small><br>
+                        <strong>Médico:</strong> ${item.medico}<br>
+                        <p>${item.anotacoes}</p>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
